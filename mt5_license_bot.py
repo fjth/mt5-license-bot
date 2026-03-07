@@ -185,19 +185,22 @@ class ConfirmView(View):
 #  API — create license(s) on mt5.app
 # ══════════════════════════════════════════════
 async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: str, email: str, real_name: str) -> dict:
-    # Build payload using exact field names from mt5.app API docs
+    # Minimal payload — only send what's needed, let mt5.app use defaults for everything else
     payload = {
-        "eaId":               ea_id,
-        "customerEmail":      email,
-        "customerName":       real_name,
-        "maxActivations":     10,       # max 10 trading accounts per license
-        "disableLiveTrading": False,    # False = live trading IS enabled
+        "eaId":           ea_id,
+        "customerEmail":  email,
+        "customerName":   real_name,
+        "maxActivations": 10,
+        "autoRenew":      True,
     }
+
     if plan == "lifetime":
-        payload["lifetime"] = True      # never expires
+        payload["lifetime"] = True
     else:
         payload["durationValue"] = 30
         payload["durationUnit"]  = "day"
+
+    print(f"[API] Sending payload: {payload}")
 
     headers = {
         "Authorization": f"Bearer {MT5APP_API_KEY}",
