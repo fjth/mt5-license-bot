@@ -22,11 +22,6 @@ EA_ID_MT4         = os.environ["EA_ID_MT4"]
 EA_ID_MT5         = os.environ["EA_ID_MT5"]
 MT5APP_API_BASE   = "https://mt5.app/api/v1/licenses"
 
-# Expiry days per plan
-EXPIRY_DAYS = {
-    "monthly":  30,
-    "lifetime": 36500,   # 100 years ≈ lifetime
-}
 # ─────────────────────────────────────────────
 
 intents = discord.Intents.default()
@@ -136,7 +131,6 @@ class PlanPlatformView(View):
         embed.add_field(name="📧 Email",         value=self.email,       inline=True)
         embed.add_field(name="📅 Plan",          value=plan_label,       inline=True)
         embed.add_field(name="🖥️ Platform",      value=platform_label,   inline=True)
-        embed.add_field(name="⏳ Expiry",        value=f"{EXPIRY_DAYS[self.plan]} days", inline=True)
         embed.set_footer(text="Click ✅ Confirm to create the license(s) or ❌ Cancel to abort.")
         await interaction.response.edit_message(embed=embed, view=view)
 
@@ -199,7 +193,6 @@ async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: s
         payload["lifetime"]  = True
         payload["expiresAt"] = None
     else:
-        payload["expiresAt"]     = None
         payload["durationValue"] = 1
         payload["durationUnit"]  = "month"
 
