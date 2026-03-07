@@ -203,11 +203,19 @@ async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: s
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=15),
         ) as resp:
-            data = await resp.json()
-            if resp.status == 200 and data.get("success"):
-                return {"ok": True, "license": data["license"]}
+            raw = await resp.text()
+            print(f"[API] Status: {resp.status}")
+            print(f"[API] Content-Type: {resp.content_type}")
+            print(f"[API] Raw response: {raw[:500]}")
+            if resp.content_type == "application/json":
+                import json
+                data = json.loads(raw)
+                if resp.status == 200 and data.get("success"):
+                    return {"ok": True, "license": data["license"]}
+                else:
+                    return {"ok": False, "error": data.get("message", f"HTTP {resp.status}")}
             else:
-                return {"ok": False, "error": data.get("message", f"HTTP {resp.status}")}
+                return {"ok": False, "error": f"Unexpected response (HTTP {resp.status}): {raw[:200]}"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
