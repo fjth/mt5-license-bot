@@ -199,7 +199,7 @@ async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: s
         payload["durationUnit"]  = "day"
 
     headers = {
-        "X-API-Key":    MT5APP_API_KEY,   # correct header name per docs
+        "Authorization": f"Bearer {MT5APP_API_KEY}",
         "Content-Type": "application/json",
     }
     try:
