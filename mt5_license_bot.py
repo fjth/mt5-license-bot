@@ -187,13 +187,14 @@ class ConfirmView(View):
 async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: str, email: str, real_name: str) -> dict:
     # Build payload using exact field names from mt5.app API docs
     payload = {
-        "eaId":          ea_id,
-        "customerEmail": email,
-        "customerName":  real_name,
-        "maxActivations": 1,
+        "eaId":               ea_id,
+        "customerEmail":      email,
+        "customerName":       real_name,
+        "maxActivations":     10,       # max 10 trading accounts per license
+        "disableLiveTrading": False,    # False = live trading IS enabled
     }
     if plan == "lifetime":
-        payload["lifetime"] = True
+        payload["lifetime"] = True      # never expires
     else:
         payload["durationValue"] = 30
         payload["durationUnit"]  = "day"
