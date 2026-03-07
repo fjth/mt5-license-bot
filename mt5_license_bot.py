@@ -192,6 +192,7 @@ async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: s
         "customerName":   real_name,
         "maxActivations": 10,
         "autoRenew":      True,
+        "type":           "LIVE",
     }
 
     if plan == "lifetime":
