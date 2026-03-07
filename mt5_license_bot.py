@@ -20,7 +20,7 @@ DISCORD_BOT_TOKEN = os.environ["DISCORD_BOT_TOKEN"]
 MT5APP_API_KEY    = os.environ["MT5APP_API_KEY"]
 EA_ID_MT4         = os.environ["EA_ID_MT4"]
 EA_ID_MT5         = os.environ["EA_ID_MT5"]
-MT5APP_API_BASE   = "https://mt5.app/api/v1"
+MT5APP_API_BASE   = "https://mt5.app/api/v1/licenses"
 
 # Expiry days per plan
 EXPIRY_DAYS = {
@@ -184,38 +184,44 @@ class ConfirmView(View):
 # ══════════════════════════════════════════════
 #  API — create license(s) on mt5.app
 # ══════════════════════════════════════════════
-async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: str, email: str) -> dict:
+async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: str, email: str, real_name: str) -> dict:
+    # Build payload using exact field names from mt5.app API docs
     payload = {
-        "ea_id":           ea_id,
-        "type":            "ACTIVATION_BASED",
-        "max_activations": 1,
-        "expiry_days":     EXPIRY_DAYS[plan],
-        "customer_email":  email,
+        "eaId":          ea_id,
+        "customerEmail": email,
+        "customerName":  real_name,
+        "maxActivations": 1,
     }
+    if plan == "lifetime":
+        payload["lifetime"] = True
+    else:
+        payload["durationValue"] = 30
+        payload["durationUnit"]  = "day"
+
     headers = {
-        "Authorization": f"Bearer {MT5APP_API_KEY}",
-        "Content-Type":  "application/json",
+        "X-API-Key":    MT5APP_API_KEY,   # correct header name per docs
+        "Content-Type": "application/json",
     }
     try:
         async with session.post(
-            f"{MT5APP_API_BASE}/licenses/create",
+            MT5APP_API_BASE,              # POST /api/v1/licenses
             json=payload,
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=15),
         ) as resp:
+            import json as _json
             raw = await resp.text()
             print(f"[API] Status: {resp.status}")
-            print(f"[API] Content-Type: {resp.content_type}")
             print(f"[API] Raw response: {raw[:500]}")
-            if resp.content_type == "application/json":
-                import json
-                data = json.loads(raw)
-                if resp.status == 200 and data.get("success"):
-                    return {"ok": True, "license": data["license"]}
-                else:
-                    return {"ok": False, "error": data.get("message", f"HTTP {resp.status}")}
+            try:
+                data = _json.loads(raw)
+            except Exception:
+                return {"ok": False, "error": f"Non-JSON response (HTTP {resp.status}): {raw[:200]}"}
+
+            if resp.status in (200, 201):
+                return {"ok": True, "license": data}
             else:
-                return {"ok": False, "error": f"Unexpected response (HTTP {resp.status}): {raw[:200]}"}
+                return {"ok": False, "error": data.get("message", data.get("error", f"HTTP {resp.status}"))}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
@@ -225,9 +231,9 @@ async def create_licenses(real_name, email, plan, platforms) -> dict:
     async with aiohttp.ClientSession() as session:
         tasks = {}
         if platforms in ("mt4", "mt4+mt5"):
-            tasks["MT4"] = create_one_license(session, EA_ID_MT4, plan, email)
+            tasks["MT4"] = create_one_license(session, EA_ID_MT4, plan, email, real_name)
         if platforms in ("mt5", "mt4+mt5"):
-            tasks["MT5"] = create_one_license(session, EA_ID_MT5, plan, email)
+            tasks["MT5"] = create_one_license(session, EA_ID_MT5, plan, email, real_name)
         for platform, coro in tasks.items():
             results[platform] = await coro
     return results
@@ -246,18 +252,20 @@ def build_result_embed(results, real_name, email, plan, platforms, requested_by)
     for platform, result in results.items():
         if result["ok"]:
             lic = result["license"]
+            # mt5.app returns the license object directly
+            key = lic.get("key") or lic.get("licenseKey") or lic.get("id", "N/A")
             embed.add_field(
                 name=f"🔑 {platform} License Key",
-                value=f"```{lic['key']}```",
+                value=f"```{key}```",
                 inline=False,
             )
             embed.add_field(
                 name=f"{platform} Details",
                 value=(
-                    f"ID: `{lic['id']}`\n"
-                    f"Status: `{lic['status']}`\n"
-                    f"Expires: `{lic.get('expires_at', 'N/A')}`\n"
-                    f"Activations: `{lic['activations_used']}/{lic['max_activations']}`"
+                    f"ID: `{lic.get('id', 'N/A')}`\n"
+                    f"Status: `{lic.get('status', 'N/A')}`\n"
+                    f"Expires: `{lic.get('expiresAt') or lic.get('expires_at') or 'Lifetime'}`\n"
+                    f"Activations: `{lic.get('activationsUsed', 0)}/{lic.get('maxActivations', 1)}`"
                 ),
                 inline=True,
             )
