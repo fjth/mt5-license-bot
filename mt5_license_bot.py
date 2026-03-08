@@ -20,7 +20,7 @@ DISCORD_BOT_TOKEN = os.environ["DISCORD_BOT_TOKEN"]
 MT5APP_API_KEY    = os.environ["MT5APP_API_KEY"]
 EA_ID_MT4         = os.environ["EA_ID_MT4"]
 EA_ID_MT5         = os.environ["EA_ID_MT5"]
-MT5APP_API_BASE   = "https://mt5.app/api/v1/licenses"
+MT5APP_API_BASE   = "https://mt5.app/api/create-license"
 
 # ─────────────────────────────────────────────
 
@@ -181,25 +181,43 @@ class ConfirmView(View):
 async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: str, email: str, real_name: str) -> dict:
     # Minimal payload — only send what's needed, let mt5.app use defaults for everything else
     payload = {
-        "eaId":           ea_id,
-        "customerEmail":  email,
-        "customerName":   real_name,
-        "maxActivations": 10,
-        "autoRenew":      True,
-        "type":           "LIVE",
+        "eaId":                   ea_id,
+        "customerEmail":          email,
+        "customerName":           real_name,
+        "maxActivations":         10,
+        "autoRenew":              True,
+        "type":                   "LIVE",
+        "expiresAt":              None,
+        "durationMonths":         1,
+        "durationValue":          1,
+        "durationUnit":           "months",
+        "paymentId":              None,
+        "allowedAccounts":        None,
+        "minimumAccountBalance":  None,
+        "maximumAccountBalance":  None,
+        "minimumAccountEquity":   None,
+        "maximumAccountEquity":   None,
+        "limitPairs":             None,
+        "limitTimeframes":        None,
+        "disableDemoTrading":     False,
+        "disableLiveTrading":     False,
+        "disableBacktesting":     False,
+        "comments":               None,
+        "language":               "en",
+        "isTestMode":             False,
     }
 
     if plan == "lifetime":
-        payload["lifetime"] = True
-    else:
-        payload["durationValue"] = 1
-        payload["durationUnit"]  = "month"
+        payload["lifetime"]      = True
+        payload["durationMonths"] = None
+        payload["durationValue"]  = None
+        payload["durationUnit"]   = None
 
     print(f"[API] Sending payload: {payload}")
 
     headers = {
-        "X-API-Key":    MT5APP_API_KEY,
-        "Content-Type": "application/json",
+        "Authorization": f"Bearer {MT5APP_API_KEY}",
+        "Content-Type":  "application/json",
     }
     try:
         async with session.post(
