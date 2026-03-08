@@ -190,17 +190,15 @@ async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: s
     }
 
     if plan == "lifetime":
-        payload["lifetime"]       = True
-        payload["expiresAt"]      = None
+        payload["lifetime"] = True
     else:
-        payload["expiresAt"]      = None
-        payload["durationMonths"] = 1
-        payload["durationValue"]  = 1
+        payload["durationValue"] = 1
+        payload["durationUnit"]  = "month"
 
     print(f"[API] Sending payload: {payload}")
 
     headers = {
-        "Authorization": f"Bearer {MT5APP_API_KEY}",
+        "X-API-Key":    MT5APP_API_KEY,
         "Content-Type": "application/json",
     }
     try:
