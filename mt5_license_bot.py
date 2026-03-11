@@ -190,10 +190,11 @@ async def create_one_license(session: aiohttp.ClientSession, ea_id: str, plan: s
     }
 
     if plan == "lifetime":
-        payload["lifetime"] = True
+        payload["expirationType"] = "LIFETIME"
     else:
-        payload["durationValue"] = 1
-        payload["durationUnit"]  = "month"
+        payload["expirationType"] = "DURATION"
+        payload["durationValue"]  = 1
+        payload["durationUnit"]   = "MONTH"
 
     print(f"[API] Sending payload: {payload}")
 
